@@ -147,18 +147,6 @@ public class HttpClient {
 				// create the HTTP POST object
 				HttpPost httpPost = createHttpPost(environment, transaction);
 
-				// get the raw data being sent for logging while in sandbox type
-				// modes
-				if (Environment.SANDBOX.equals(environment)
-						|| Environment.SANDBOX_TESTMODE.equals(environment)) {
-					InputStream outstream = (InputStream) httpPost.getEntity()
-							.getContent();
-					String requestData = convertStreamToLoggableString(
-							transaction, outstream);
-					//
-
-				}
-
 				// execute the request
 				HttpResponse httpResponse = httpClient.execute(httpPost);
 				String rawResponseString = "";
@@ -168,8 +156,7 @@ public class HttpClient {
 
 					// get the raw data being received
 					InputStream instream = (InputStream) entity.getContent();
-					rawResponseString = convertStreamToLoggableString(
-							transaction, instream);
+					rawResponseString = convertStreamToString(transaction, instream);
 				}
 				// handle HTTP errors
 				else {
@@ -211,7 +198,7 @@ public class HttpClient {
 	 * 
 	 * @return string containing the response with sensitive data removed
 	 */
-	public static String convertStreamToLoggableString(
+	public static String convertStreamToString(
 			ITransaction transaction, InputStream responseInputStream) {
 		InputStreamReader responseReader = new InputStreamReader(
 				responseInputStream);
@@ -222,31 +209,6 @@ public class HttpClient {
 		String line = null;
 		try {
 			while ((line = bufferedResponseReader.readLine()) != null) {
-				if (transaction.getMerchant() != null
-						&& transaction.getMerchant()
-								.getMerchantAuthentication() != null
-						&& transaction.getMerchant()
-								.getMerchantAuthentication().getSecret() != null) {
-					line = line.replaceAll(transaction.getMerchant()
-							.getMerchantAuthentication().getSecret(), "");
-				}
-				if (transaction.getBankAccount() != null
-						&& transaction.getBankAccount().getBankAccountNumber() != null) {
-					line = line.replaceAll(transaction.getBankAccount()
-							.getBankAccountNumber(), "");
-				}
-				if (transaction.getCreditCard() != null) {
-					if (transaction.getCreditCard().getCardCode() != null) {
-						line = line.replaceAll(transaction.getCreditCard()
-								.getCardCode(), "");
-					}
-					if (transaction.getCreditCard().getCreditCardNumber() != null) {
-						line = line.replaceAll(transaction.getCreditCard()
-								.getCreditCardNumber(), Luhn.safeFormat('X',
-								transaction.getCreditCard()
-										.getCreditCardNumber()));
-					}
-				}
 				sb.append(line + "\n");
 			}
 		} catch (IOException e) {
@@ -290,17 +252,6 @@ public class HttpClient {
 				HttpConnectionParams.setSoTimeout(httpParams,
 						HTTP_SOCKET_CONNECTION_TIMEOUT);
 
-				// get the raw data being sent for logging while in sandbox type
-				// modes
-				if (Environment.SANDBOX.equals(environment)
-						|| Environment.SANDBOX_TESTMODE.equals(environment)) {
-					InputStream outstream = (InputStream) httpPost.getEntity()
-							.getContent();
-					String loggableRequestData = convertStreamToLoggableString(
-							transaction, outstream);
-
-				}
-
 				// execute the request
 				HttpResponse httpResponse = httpClient.execute(httpPost);
 				if (httpResponse != null
@@ -309,8 +260,7 @@ public class HttpClient {
 
 					// get the raw data being received
 					InputStream instream = (InputStream) entity.getContent();
-					rawResponseString = convertStreamToLoggableString(
-							transaction, instream);
+					rawResponseString = convertStreamToString(transaction, instream);
 				} else {
 					rawResponseString = createErrorResponse(httpResponse != null ? httpResponse
 							.getStatusLine().getReasonPhrase()
